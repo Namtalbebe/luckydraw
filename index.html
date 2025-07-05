@@ -164,21 +164,15 @@
           });
         });
 
-        // IMPORTANT: Replace this URL with your actual Google Apps Script Web App URL.
-        // You need to deploy a Google Apps Script as a Web App to handle this POST request.
-        // The script should be designed to append the received data to your "Lucky Draw" sheet.
-        const googleAppsScriptUrl = 'https://script.google.com/macros/s/AKfycbzCF49uS4qZeLnZKcnZwL9TTz11dSmya3cApqx6aTQf-04rWl0fT-vNocCJHtlq5rJU/exec'; // e.g., https://script.google.com/macros/s/AKfycb.../exec
+        // Your Google Apps Script Web App URL
+        const googleAppsScriptUrl = 'https://script.google.com/macros/s/AKfycbzCF49uS4qZeLnZKcnZwL9TTz11dSmya3cApqx6aTQf-04rWl0fT-vNocCJHtlq5rJU/exec';
 
-        if (googleAppsScriptUrl === 'https://script.google.com/macros/s/AKfycbzCF49uS4qZeLnZKcnZwL9TTz11dSmya3cApqx6aTQf-04rWl0fT-vNocCJHtlq5rJU/exec') {
-            alert("Error: กรุณาตั้งค่า 'https://script.google.com/macros/s/AKfycbzCF49uS4qZeLnZKcnZwL9TTz11dSmya3cApqx6aTQf-04rWl0fT-vNocCJHtlq5rJU/exec' ในโค้ดก่อนใช้งานฟังก์ชันส่งข้อมูล");
-            console.error("Please configure the Google Apps Script URL.");
-            return;
-        }
+        // The previous 'if' condition that caused the error has been removed.
+        // Now, the fetch request will proceed directly.
 
         fetch(googleAppsScriptUrl, {
           method: 'POST',
-          mode: 'no-cors', // Use 'no-cors' for simple requests to Apps Script without needing to read the response.
-                           // If you need detailed success/error feedback from Apps Script, you might need to configure CORS on both ends and use 'cors' mode.
+          mode: 'no-cors',
           headers: {
             'Content-Type': 'application/json',
           },
