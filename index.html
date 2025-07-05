@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>สุ่มรางวัล</title>
+</head>
+<body>
+  <h2>สุ่มรางวัล ชุดละ 10 ตัว (1–100)</h2>
+  <input type="number" id="setNumber" placeholder="ระบุชุดที่ (เช่น 1)">
+  <button onclick="randomNumbers()">สุ่มเลข</button>
+  <p id="result"></p>
+
+  <script>
+    function randomNumbers() {
+      const allNumbers = Array.from({ length: 100 }, (_, i) => i + 1);
+      const selected = [];
+
+      while (selected.length < 10) {
+        const index = Math.floor(Math.random() * allNumbers.length);
+        selected.push(allNumbers.splice(index, 1)[0]);
+      }
+
+      const setNumber = document.getElementById("setNumber").value || "ไม่ระบุ";
+      document.getElementById("result").innerText = "ชุดที่ " + setNumber + ": " + selected.join(", ");
+
+      fetch("https://script.google.com/macros/s/AKfycbzCF49uS4qZeLnZKcnZwL9TTz11dSmya3cApqx6aTQf-04rWl0fT-vNocCJHtlq5rJU/exec", {
+        method: "POST",
+        body: JSON.stringify({
+          set: setNumber,
+          numbers: selected
+        }),
+        headers: {
+          "Content-Type": "application/json"
+        }
+      })
+      .then(res => res.text())
+      .then(txt => alert("ส่งผลไป Google Sheet แล้ว: " + txt))
+      .catch(err => alert("เกิดข้อผิดพลาด: " + err));
+    }
+  </script>
+</body>
+</html>
