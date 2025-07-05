@@ -1,105 +1,218 @@
 <!DOCTYPE html>
-<html lang="th">
+<html>
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8">
   <title>ประกาศผลรางวัล Lucky Draw</title>
   <style>
     body {
       font-family: sans-serif;
+      font-size: 24px;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start; /* จัดเนื้อหาให้อยู่ด้านบน */
+      min-height: 100vh;
+      margin: 0;
       padding: 20px;
-      background: #f9f9f9;
+      box-sizing: border-box;
+      background-color: #f4f4f4;
     }
-    h1 {
+
+    .container {
+      width: 90%;
+      max-width: 960px;
+      text-align: center;
+      background-color: #ffffff;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    }
+
+    h2, h3 {
       color: #333;
     }
-    input, button {
-      font-size: 16px;
-      padding: 8px;
-      margin: 5px 0;
+
+    label {
+      display: block;
+      margin-bottom: 10px;
     }
+
+    input[type="number"] {
+      padding: 10px;
+      font-size: 20px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      width: calc(100% - 22px);
+      max-width: 300px;
+      text-align: center;
+    }
+
+    button {
+      padding: 12px 25px;
+      font-size: 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    #resultsTableContainer {
+      margin-top: 30px;
+      text-align: left;
+      padding: 0 20px;
+    }
+
     table {
       width: 100%;
       border-collapse: collapse;
-      margin-top: 20px;
+      margin-top: 15px;
     }
+
     th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
+      border: 1px solid #ddd;
+      padding: 12px;
       text-align: left;
     }
+
     th {
-      background-color: #eee;
+      background-color: #f2f2f2;
+      font-weight: bold;
+    }
+
+    /* Responsive table for smaller screens */
+    @media screen and (max-width: 600px) {
+      table, thead, tbody, th, td, tr {
+        display: block;
+      }
+
+      thead tr {
+        position: absolute;
+        top: -9999px;
+        left: -9999px;
+      }
+
+      tr {
+        margin: 0 0 1rem 0;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      }
+
+      td {
+        border: none;
+        border-bottom: 1px solid #eee;
+        position: relative;
+        padding-left: 50%;
+        text-align: right;
+      }
+
+      td:before {
+        position: absolute;
+        top: 0;
+        left: 6px;
+        width: 45%;
+        padding-right: 10px;
+        white-space: nowrap;
+        text-align: left;
+        font-weight: bold;
+      }
+
+      td:nth-of-type(1):before { content: "E-TICKET ID"; }
+      td:nth-of-type(2):before { content: "ชื่อ-นามสกุล"; }
+      td:nth-of-type(3):before { content: "ร้านยา"; }
+      td:nth-of-type(4):before { content: "รางวัลที่ได้"; }
     }
   </style>
 </head>
 <body>
+  <div class="container">
+    <h2>ตรวจสอบผลรางวัล Lucky Draw</h2>
 
-<h1>ตรวจสอบรางวัล Lucky Draw</h1>
-<p>กรอกหมายเลข E-Ticket ID แล้วกด "เช็ครางวัล"</p>
+    <label for="eticketIdInput">กรอก E-Ticket ID ของคุณ:</label>
+    <input type="number" id="eticketIdInput" placeholder="เช่น 123">
+    <button onclick="checkPrize()">ตรวจสอบรางวัล</button>
 
-<input type="text" id="searchId" placeholder="เช่น 12345" />
-<button onclick="checkPrize()">เช็ครางวัล</button>
+    <div id="resultsTableContainer">
+      <!-- ผลลัพธ์จะแสดงที่นี่ -->
+    </div>
 
-<div id="result"></div>
+    <script>
+      // IMPORTANT: คุณต้องแทนที่ 'YOUR_GET_PRIZE_APPS_SCRIPT_URL_HERE' ด้วย URL ของ Google Apps Script Web App ใหม่
+      // ที่จะสร้างขึ้นสำหรับหน้านี้ (ดูโค้ด Apps Script ด้านล่าง)
+      const getPrizeAppsScriptUrl = 'https://script.google.com/macros/s/AKfycbyTkh9e0Sa-xJc0MP6Cy-1FYvnL49B5-XmaiAx5Ro-280qTbUNmdgGu4tURD7CzheGY/exec'; // URL ของ Web App สำหรับ check prize ถูกอัปเดตแล้ว
 
-<script>
-  const sheetId = "1ujicA8LIYWqMda_2JumkF2pounl9gRTAVRAkSj3b1ck";
-  const sheetName = "List";
-  const sheetRange = "A3:G1000"; // เผื่อข้อมูลถึงแถว 1000
+      async function checkPrize() {
+        const eticketId = document.getElementById("eticketIdInput").value;
+        const resultsContainer = document.getElementById("resultsTableContainer");
 
-  async function fetchSheetData() {
-    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}!${sheetRange}?key=YOUR_API_KEY`;
-    const res = await fetch(url);
-    const data = await res.json();
-    return data.values || [];
-  }
+        if (!eticketId || isNaN(parseInt(eticketId))) {
+          resultsContainer.innerHTML = `<p style="color: red;">กรุณากรอก E-Ticket ID ที่ถูกต้อง</p>`;
+          return;
+        }
 
-  async function checkPrize() {
-    const inputId = document.getElementById("searchId").value.trim();
-    const resultDiv = document.getElementById("result");
+        // ไม่จำเป็นต้องมี alert สำหรับ URL ที่ยังไม่ได้ตั้งค่าแล้ว
+        // if (getPrizeAppsScriptUrl === 'YOUR_GET_PRIZE_APPS_SCRIPT_URL_HERE') {
+        //     resultsContainer.innerHTML = `<p style="color: red;">Error: กรุณาตั้งค่า 'getPrizeAppsScriptUrl' ในโค้ดด้วย URL ของ Apps Script สำหรับดึงข้อมูลรางวัล</p>`;
+        //     console.error("Please configure the getPrizeAppsScriptUrl.");
+        //     return;
+        // }
 
-    if (!inputId) {
-      resultDiv.innerHTML = "<p style='color:red;'>กรุณากรอกหมายเลข E-Ticket ID</p>";
-      return;
-    }
+        resultsContainer.innerHTML = `<p>กำลังตรวจสอบรางวัลสำหรับ E-Ticket ID: ${eticketId}...</p>`;
 
-    const data = await fetchSheetData();
+        try {
+          const response = await fetch(`${getPrizeAppsScriptUrl}?id=${eticketId}`, {
+            method: 'GET',
+            mode: 'cors' // ใช้ 'cors' เพื่ออ่านการตอบกลับจาก Apps Script
+          });
 
-    const matches = data.filter(row => row[0] === inputId);
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+          }
 
-    if (matches.length === 0) {
-      resultDiv.innerHTML = `<p style="color:red;">ไม่พบหมายเลข ${inputId} ในรายการ</p>`;
-      return;
-    }
+          const data = await response.json();
 
-    let tableHTML = `
-      <table>
-        <thead>
-          <tr>
-            <th>E-Ticket ID</th>
-            <th>ชื่อ-นามสกุล</th>
-            <th>ร้านยา</th>
-            <th>รางวัลที่ได้</th>
-          </tr>
-        </thead>
-        <tbody>
-    `;
+          if (data.status === "success" && data.prizeDetails) {
+            const p = data.prizeDetails;
+            let tableHtml = `
+              <h3>ผลการตรวจสอบรางวัลสำหรับ E-Ticket ID: ${p.id}</h3>
+              <table>
+                <thead>
+                  <tr>
+                    <th>E-TICKET ID</th>
+                    <th>ชื่อ-นามสกุล</th>
+                    <th>ร้านยา</th>
+                    <th>รางวัลที่ได้</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>${p.id || '-'}</td>
+                    <td>${p.name || '-'}</td>
+                    <td>${p.shop || '-'}</td>
+                    <td>${p.prize || 'ไม่ได้รับรางวัล'}</td>
+                  </tr>
+                </tbody>
+              </table>
+            `;
+            resultsContainer.innerHTML = tableHtml;
+          } else {
+            resultsContainer.innerHTML = `<p style="color: orange;">ไม่พบข้อมูลรางวัลสำหรับ E-Ticket ID: ${eticketId} หรือยังไม่ได้รับรางวัล</p>`;
+            console.warn("No prize data found or error:", data.message || "Unknown error");
+          }
 
-    matches.forEach(row => {
-      tableHTML += `
-        <tr>
-          <td>${row[0]}</td>
-          <td>${row[1] || "-"}</td>
-          <td>${row[2] || "-"}</td>
-          <td>${row[6] || "-"}</td>
-        </tr>
-      `;
-    });
-
-    tableHTML += `</tbody></table>`;
-    resultDiv.innerHTML = tableHTML;
-  }
-</script>
-
+        } catch (error) {
+          console.error('Error fetching prize data:', error);
+          resultsContainer.innerHTML = `<p style="color: red;">เกิดข้อผิดพลาดในการดึงข้อมูลรางวัล: ${error.message}<br>โปรดตรวจสอบ E-Ticket ID และการเชื่อมต่อ</p>`;
+        }
+      }
+    </script>
+  </div>
 </body>
 </html>
