@@ -3,74 +3,199 @@
 <head>
   <meta charset="UTF-8">
   <title>สุ่มรางวัล Small Prize</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      font-size: 24px; /* Set base font size for the entire body */
+      display: flex;
+      justify-content: center; /* Center horizontally */
+      align-items: flex-start; /* Align content to the top */
+      min-height: 100vh; /* Ensure body takes full viewport height */
+      margin: 0; /* Remove default body margin */
+      padding: 20px; /* Add some padding around the content */
+      box-sizing: border-box; /* Include padding in element's total width and height */
+      background-color: #f4f4f4; /* Optional: light background color */
+    }
+
+    .container {
+      width: 90%; /* Adjust as needed */
+      max-width: 960px; /* Max width for larger screens */
+      text-align: center; /* Center text and inline elements within the container */
+      background-color: #ffffff; /* White background for the content area */
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* Subtle shadow for depth */
+    }
+
+    h2, h3 {
+      color: #333;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 10px;
+    }
+
+    input[type="number"] {
+      padding: 10px;
+      font-size: 20px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-bottom: 20px;
+      width: calc(100% - 22px); /* Adjust for padding and border */
+      max-width: 300px;
+      text-align: center;
+    }
+
+    button {
+      padding: 12px 25px;
+      font-size: 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      margin: 5px;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    #prizeList, #results {
+      margin-top: 20px;
+      text-align: left; /* Align lists and results to the left */
+      padding: 0 20px;
+    }
+
+    ul {
+      list-style-type: none;
+      padding: 0;
+    }
+
+    li {
+      margin-bottom: 5px;
+    }
+  </style>
 </head>
 <body>
-  <h2>ระบบสุ่มรางวัล Small Prize</h2>
+  <div class="container">
+    <h2>ระบบสุ่มรางวัล Small Prize</h2>
 
-  <label>กรอกจำนวนผู้เข้าร่วมงานทั้งหมด:</label>
-  <input type="number" id="totalParticipants" placeholder="เช่น 200">
-  <button onclick="generatePrizes()">แสดงรายการรางวัล</button>
+    <label>กรอกจำนวนผู้เข้าร่วมงานทั้งหมด:</label>
+    <input type="number" id="totalParticipants" placeholder="เช่น 200">
+    <button onclick="generatePrizes()">แสดงรายการรางวัล</button>
 
-  <div id="prizeList"></div>
+    <div id="prizeList"></div>
 
-  <button onclick="drawPrizes()" style="display:none;" id="drawBtn">สุ่มรางวัล</button>
-  <div id="results"></div>
+    <button onclick="drawPrizes()" style="display:none;" id="drawBtn">สุ่มรางวัล</button>
+    <div id="results"></div>
 
-  <script>
-    const prizes = [
-      { set: 1, name: "ถุงหิ้วขาว", amount: 30 },
-      { set: 2, name: "ร่ม", amount: 60 },
-      { set: 3, name: "กระเป๋าเก็บสายชาร์จ", amount: 30 },
-      { set: 4, name: "ลิ้นชักเล็ก", amount: 30 },
-      { set: 5, name: "หมอนงีบ", amount: 30 },
-      { set: 6, name: "พรมเช็ดเท้า", amount: 30 },
-      { set: 7, name: "ตะกร้ากระจูด", amount: 30 },
-      { set: 8, name: "ผ้าขนหนู", amount: 30 },
-      { set: 9, name: "แก้วน้ำ", amount: "remaining" }
-    ];
+    <button onclick="sendToGoogleSheet()" style="display:none;" id="sendToSheetBtn">ส่งข้อมูลไป Google Sheet</button>
 
-    let participants = [];
-    let drawResults = [];
+    <script>
+      const prizes = [
+        { set: 1, name: "ถุงหิ้วขาว", amount: 30 },
+        { set: 2, name: "ร่ม", amount: 60 },
+        { set: 3, name: "กระเป๋าเก็บสายชาร์จ", amount: 30 },
+        { set: 4, name: "ลิ้นชักเล็ก", amount: 30 },
+        { set: 5, name: "หมอนงีบ", amount: 30 },
+        { set: 6, name: "พรมเช็ดเท้า", amount: 30 },
+        { set: 7, name: "ตะกร้ากระจูด", amount: 30 },
+        { set: 8, name: "ผ้าขนหนู", amount: 30 },
+        { set: 9, name: "แก้วน้ำ", amount: "remaining" }
+      ];
 
-    function generatePrizes() {
-      const total = parseInt(document.getElementById("totalParticipants").value);
-      if (!total || total <= 0) {
-        alert("กรุณากรอกจำนวนผู้เข้าร่วมงานให้ถูกต้อง");
-        return;
+      let participants = [];
+      let drawResults = [];
+
+      function generatePrizes() {
+        const total = parseInt(document.getElementById("totalParticipants").value);
+        if (!total || total <= 0) {
+          alert("กรุณากรอกจำนวนผู้เข้าร่วมงานให้ถูกต้อง");
+          return;
+        }
+
+        participants = Array.from({ length: total }, (_, i) => i + 1);
+        let used = prizes.slice(0, 8).reduce((sum, p) => sum + p.amount, 0);
+        prizes[8].amount = total - used; // แก้วน้ำ = จำนวนที่เหลือ
+
+        let html = `<h3>รายการของรางวัล:</h3><ul>`;
+        prizes.forEach(p => {
+          html += `<li>ชุดที่ ${p.set} - ${p.name} จำนวน: ${p.amount} รางวัล</li>`;
+        });
+        html += `</ul>`;
+        document.getElementById("prizeList").innerHTML = html;
+        document.getElementById("drawBtn").style.display = "inline-block";
+        document.getElementById("sendToSheetBtn").style.display = "none"; // Hide until draw results are ready
       }
 
-      participants = Array.from({ length: total }, (_, i) => i + 1);
-      let used = prizes.slice(0, 8).reduce((sum, p) => sum + p.amount, 0);
-      prizes[8].amount = total - used; // แก้วน้ำ = จำนวนที่เหลือ
+      function drawPrizes() {
+        let pool = [...participants];
+        drawResults = [];
 
-      let html = `<h3>รายการของรางวัล:</h3><ul>`;
-      prizes.forEach(p => {
-        html += `<li>ชุดที่ ${p.set} - ${p.name} จำนวน: ${p.amount} รางวัล</li>`;
-      });
-      html += `</ul>`;
-      document.getElementById("prizeList").innerHTML = html;
-      document.getElementById("drawBtn").style.display = "inline-block";
-    }
+        let html = `<h3>ผลการสุ่มรางวัล:</h3>`;
+        prizes.forEach(p => {
+          let selected = [];
+          for (let i = 0; i < p.amount; i++) {
+            const index = Math.floor(Math.random() * pool.length);
+            selected.push(pool.splice(index, 1)[0]);
+          }
+          drawResults.push({ set: p.set, name: p.name, winners: selected });
+          html += `<b>ชุดที่ ${p.set} - ${p.name}:</b> ${selected.join(", ")}<br>`;
+        });
 
-    function drawPrizes() {
-      let pool = [...participants];
-      drawResults = [];
+        document.getElementById("results").innerHTML = html;
+        document.getElementById("sendToSheetBtn").style.display = "inline-block"; // Show the send button
+      }
 
-      let html = `<h3>ผลการสุ่มรางวัล:</h3>`;
-      prizes.forEach(p => {
-        let selected = [];
-        for (let i = 0; i < p.amount; i++) {
-          const index = Math.floor(Math.random() * pool.length);
-          selected.push(pool.splice(index, 1)[0]);
+      function sendToGoogleSheet() {
+        if (drawResults.length === 0) {
+          alert("กรุณาสุ่มรางวัลก่อนส่งข้อมูลไป Google Sheet");
+          return;
         }
-        drawResults.push({ set: p.set, name: p.name, winners: selected });
-        html += `<b>ชุดที่ ${p.set} - ${p.name}:</b> ${selected.join(", ")}<br>`;
-      });
 
-      document.getElementById("results").innerHTML = html;
+        let dataToSend = [];
+        drawResults.forEach(prizeSet => {
+          prizeSet.winners.forEach(winnerId => {
+            // Format: [E-Ticket ID, ชุดรางวัล, รางวัลที่ได้]
+            dataToSend.push([winnerId, `ชุดที่ ${prizeSet.set}`, prizeSet.name]);
+          });
+        });
 
-      // ✅ ถ้าต้องการส่งผลไป Google Sheet ก็เรียก fetch() ตรงนี้
-    }
-  </script>
+        // IMPORTANT: Replace this URL with your actual Google Apps Script Web App URL.
+        // You need to deploy a Google Apps Script as a Web App to handle this POST request.
+        // The script should be designed to append the received data to your "Lucky Draw" sheet.
+        const googleAppsScriptUrl = 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE'; // e.g., https://script.google.com/macros/s/AKfycb.../exec
+
+        if (googleAppsScriptUrl === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
+            alert("Error: กรุณาตั้งค่า 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE' ในโค้ดก่อนใช้งานฟังก์ชันส่งข้อมูล");
+            console.error("Please configure the Google Apps Script URL.");
+            return;
+        }
+
+        fetch(googleAppsScriptUrl, {
+          method: 'POST',
+          mode: 'no-cors', // Use 'no-cors' for simple requests to Apps Script without needing to read the response.
+                           // If you need detailed success/error feedback from Apps Script, you might need to configure CORS on both ends and use 'cors' mode.
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ data: dataToSend }),
+        })
+        .then(() => {
+          // With 'no-cors', response object is opaque and cannot be inspected for success/failure.
+          // Assume success if no network error. Rely on Apps Script's execution.
+          console.log('Data sent to Google Sheet handler. Please check your Google Sheet for updates.');
+          alert('ส่งข้อมูลไป Google Sheet แล้ว (โปรดตรวจสอบผลลัพธ์ใน Google Sheet)');
+        })
+        .catch(error => {
+          console.error('Error sending data to Google Sheet:', error);
+          alert('เกิดข้อผิดพลาดในการส่งข้อมูลไป Google Sheet: ' + error.message + '\nโปรดตรวจสอบ URL และการตั้งค่า Apps Script');
+        });
+      }
+    </script>
+  </div>
 </body>
 </html>
