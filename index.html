@@ -2,40 +2,74 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>สุ่มรางวัล</title>
+  <title>สุ่มรางวัล Small Prize</title>
 </head>
 <body>
-  <h2>สุ่มรางวัล ชุดละ 10 ตัว (1–100)</h2>
-  <input type="number" id="setNumber" placeholder="ระบุชุดที่ (เช่น 1)">
-  <button onclick="randomNumbers()">สุ่มเลข</button>
-  <p id="result"></p>
+  <h2>ระบบสุ่มรางวัล Small Prize</h2>
+
+  <label>กรอกจำนวนผู้เข้าร่วมงานทั้งหมด:</label>
+  <input type="number" id="totalParticipants" placeholder="เช่น 200">
+  <button onclick="generatePrizes()">แสดงรายการรางวัล</button>
+
+  <div id="prizeList"></div>
+
+  <button onclick="drawPrizes()" style="display:none;" id="drawBtn">สุ่มรางวัล</button>
+  <div id="results"></div>
 
   <script>
-    function randomNumbers() {
-      const allNumbers = Array.from({ length: 100 }, (_, i) => i + 1);
-      const selected = [];
+    const prizes = [
+      { set: 1, name: "ถุงหิ้วขาว", amount: 30 },
+      { set: 2, name: "ร่ม", amount: 60 },
+      { set: 3, name: "กระเป๋าเก็บสายชาร์จ", amount: 30 },
+      { set: 4, name: "ลิ้นชักเล็ก", amount: 30 },
+      { set: 5, name: "หมอนงีบ", amount: 30 },
+      { set: 6, name: "พรมเช็ดเท้า", amount: 30 },
+      { set: 7, name: "ตะกร้ากระจูด", amount: 30 },
+      { set: 8, name: "ผ้าขนหนู", amount: 30 },
+      { set: 9, name: "แก้วน้ำ", amount: "remaining" }
+    ];
 
-      while (selected.length < 10) {
-        const index = Math.floor(Math.random() * allNumbers.length);
-        selected.push(allNumbers.splice(index, 1)[0]);
+    let participants = [];
+    let drawResults = [];
+
+    function generatePrizes() {
+      const total = parseInt(document.getElementById("totalParticipants").value);
+      if (!total || total <= 0) {
+        alert("กรุณากรอกจำนวนผู้เข้าร่วมงานให้ถูกต้อง");
+        return;
       }
 
-      const setNumber = document.getElementById("setNumber").value || "ไม่ระบุ";
-      document.getElementById("result").innerText = "ชุดที่ " + setNumber + ": " + selected.join(", ");
+      participants = Array.from({ length: total }, (_, i) => i + 1);
+      let used = prizes.slice(0, 8).reduce((sum, p) => sum + p.amount, 0);
+      prizes[8].amount = total - used; // แก้วน้ำ = จำนวนที่เหลือ
 
-      fetch("https://script.google.com/macros/s/AKfycbzCF49uS4qZeLnZKcnZwL9TTz11dSmya3cApqx6aTQf-04rWl0fT-vNocCJHtlq5rJU/exec", {
-        method: "POST",
-        body: JSON.stringify({
-          set: setNumber,
-          numbers: selected
-        }),
-        headers: {
-          "Content-Type": "application/json"
+      let html = `<h3>รายการของรางวัล:</h3><ul>`;
+      prizes.forEach(p => {
+        html += `<li>ชุดที่ ${p.set} - ${p.name} จำนวน: ${p.amount} รางวัล</li>`;
+      });
+      html += `</ul>`;
+      document.getElementById("prizeList").innerHTML = html;
+      document.getElementById("drawBtn").style.display = "inline-block";
+    }
+
+    function drawPrizes() {
+      let pool = [...participants];
+      drawResults = [];
+
+      let html = `<h3>ผลการสุ่มรางวัล:</h3>`;
+      prizes.forEach(p => {
+        let selected = [];
+        for (let i = 0; i < p.amount; i++) {
+          const index = Math.floor(Math.random() * pool.length);
+          selected.push(pool.splice(index, 1)[0]);
         }
-      })
-      .then(res => res.text())
-      .then(txt => alert("ส่งผลไป Google Sheet แล้ว: " + txt))
-      .catch(err => alert("เกิดข้อผิดพลาด: " + err));
+        drawResults.push({ set: p.set, name: p.name, winners: selected });
+        html += `<b>ชุดที่ ${p.set} - ${p.name}:</b> ${selected.join(", ")}<br>`;
+      });
+
+      document.getElementById("results").innerHTML = html;
+
+      // ✅ ถ้าต้องการส่งผลไป Google Sheet ก็เรียก fetch() ตรงนี้
     }
   </script>
 </body>
