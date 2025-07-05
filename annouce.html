@@ -36,7 +36,7 @@
       margin-bottom: 15px; /* เพิ่มระยะห่างด้านล่าง label */
     }
 
-    input[type="number"] {
+    input[type="text"] { /* เปลี่ยนจาก type="number" เป็น type="text" */
       padding: 15px; /* เพิ่ม padding */
       font-size: 24px; /* เพิ่มขนาดฟอนต์ใน input */
       border: 1px solid #ccc;
@@ -128,6 +128,7 @@
       td:nth-of-type(2):before { content: "ชื่อ-นามสกุล"; }
       td:nth-of-type(3):before { content: "ร้านยา"; }
       td:nth-of-type(4):before { content: "รางวัลที่ได้"; }
+      td:nth-of-type(5):before { content: "สถานะรับรางวัล"; } /* เพิ่มสำหรับคอลัมน์ใหม่ */
     }
   </style>
 </head>
@@ -136,7 +137,7 @@
     <h2>ตรวจสอบผลรางวัล Lucky Draw</h2>
 
     <label for="eticketIdInput">กรอก E-Ticket ID ของคุณ:</label>
-    <input type="number" id="eticketIdInput" placeholder="เช่น 123">
+    <input type="text" id="eticketIdInput" placeholder="เช่น 001, 123"> <!-- เปลี่ยนเป็น type="text" และปรับ placeholder -->
     <button onclick="checkPrize()">ตรวจสอบรางวัล</button>
 
     <div id="resultsTableContainer">
@@ -144,14 +145,18 @@
     </div>
 
     <script>
-      const getPrizeAppsScriptUrl = 'https://script.google.com/macros/s/AKfycbyTkh9e0Sa-xJc0MP6Cy-1FYvnL49B5-XmaiAx5Ro-280qTbUNmdgGu4tURD7CzheGY/exec';
+      // URL ของ Google Apps Script Web App สำหรับดึงข้อมูลรางวัล (doGet)
+      const getPrizeAppsScriptUrl = 'https://script.google.com/macros/s/AKfycbyTkh9e0Sa-xJc0MP6Cy-1FYvnL49B5-XmaiAx5Ro-280qTbUNmdgGu4tURD7CzheGY/exec'; 
+      // URL ของ Google Apps Script Web App สำหรับยืนยันการรับรางวัล (doPost)
+      const confirmReceiptAppsScriptUrl = 'YOUR_CONFIRM_RECEIPT_APPS_SCRIPT_URL_HERE'; // <--- คุณต้อง Deploy Web App ตัวใหม่สำหรับอันนี้!
 
       async function checkPrize() {
         const eticketId = document.getElementById("eticketIdInput").value;
         const resultsContainer = document.getElementById("resultsTableContainer");
 
+        // ตรวจสอบว่ามีค่าและสามารถแปลงเป็นตัวเลขได้ (เพื่อกรองค่าที่ไม่ใช่ ID ที่ถูกต้อง)
         if (!eticketId || isNaN(parseInt(eticketId))) {
-          resultsContainer.innerHTML = `<p style="color: red;">กรุณากรอก E-Ticket ID ที่ถูกต้อง</p>`;
+          resultsContainer.innerHTML = `<p style="color: red;">กรุณากรอก E-Ticket ID ที่ถูกต้อง (ตัวเลขเท่านั้น)</p>`;
           return;
         }
 
@@ -171,6 +176,22 @@
 
           if (data.status === "success" && data.prizeDetails) {
             const p = data.prizeDetails;
+            let displayReceiptStatus = '';
+            let confirmButtonHtml = '';
+
+            // กำหนดสถานะการรับรางวัลที่จะแสดง
+            if (p.registrationStatus !== "Registered") {
+                displayReceiptStatus = 'ไม่ได้ลงทะเบียน';
+            } else if (!p.prize || p.prize.trim() === '') {
+                displayReceiptStatus = 'ยังไม่ได้รับรางวัล';
+            } else if (p.receiptStatus === 'รับรางวัลแล้ว') {
+                displayReceiptStatus = 'รับรางวัลแล้ว';
+            } else {
+                displayReceiptStatus = 'ยังไม่ได้รับรางวัล';
+                // แสดงปุ่มยืนยันการรับรางวัล ถ้าได้รับรางวัลแล้วแต่ยังไม่ได้ยืนยัน
+                confirmButtonHtml = `<button onclick="confirmPrizeReceipt()">ยืนยันการรับรางวัล</button>`;
+            }
+
             let tableHtml = `
               <h3>ผลการตรวจสอบรางวัลสำหรับ E-Ticket ID: ${p.id}</h3>
               <table>
@@ -180,6 +201,7 @@
                     <th>ชื่อ-นามสกุล</th>
                     <th>ร้านยา</th>
                     <th>รางวัลที่ได้</th>
+                    <th>สถานะรับรางวัล</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -187,10 +209,12 @@
                     <td>${p.id || '-'}</td>
                     <td>${p.name || '-'}</td>
                     <td>${p.shop || '-'}</td>
-                    <td>${p.prize || 'ไม่ได้ลงทะเบียนเข้างาน'}</td>
+                    <td>${p.prize || 'ไม่ได้รับรางวัล'}</td>
+                    <td>${displayReceiptStatus}</td>
                   </tr>
                 </tbody>
               </table>
+              ${confirmButtonHtml} <!-- แสดงปุ่มยืนยันถ้ามี -->
             `;
             resultsContainer.innerHTML = tableHtml;
           } else {
@@ -201,6 +225,48 @@
         } catch (error) {
           console.error('Error fetching prize data:', error);
           resultsContainer.innerHTML = `<p style="color: red;">เกิดข้อผิดพลาดในการดึงข้อมูลรางวัล: ${error.message}<br>โปรดตรวจสอบ E-Ticket ID และการเชื่อมต่อ</p>`;
+        }
+      }
+
+      async function confirmPrizeReceipt() {
+        const eticketId = document.getElementById("eticketIdInput").value;
+        const resultsContainer = document.getElementById("resultsTableContainer");
+
+        if (!eticketId || isNaN(parseInt(eticketId))) {
+          alert("กรุณากรอก E-Ticket ID ที่ถูกต้องก่อนยืนยันการรับรางวัล");
+          return;
+        }
+
+        if (confirmReceiptAppsScriptUrl === 'YOUR_CONFIRM_RECEIPT_APPS_SCRIPT_URL_HERE') {
+            alert("Error: กรุณาตั้งค่า 'confirmReceiptAppsScriptUrl' ในโค้ดด้วย URL ของ Apps Script สำหรับยืนยันการรับรางวัล");
+            console.error("Please configure the confirmReceiptAppsScriptUrl.");
+            return;
+        }
+
+        resultsContainer.innerHTML = `<p>กำลังยืนยันการรับรางวัลสำหรับ E-Ticket ID: ${eticketId}...</p>`;
+
+        try {
+          const response = await fetch(confirmReceiptAppsScriptUrl, {
+            method: 'POST',
+            mode: 'no-cors', // ใช้ 'no-cors' หากไม่ต้องการอ่านการตอบกลับโดยตรงจาก Apps Script
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ eticketId: eticketId }), // ส่งเป็น string ตรงๆ
+          });
+
+          // เนื่องจากใช้ 'no-cors' จึงไม่สามารถตรวจสอบ response.ok ได้โดยตรง
+          // แต่เราสามารถสันนิษฐานว่าสำเร็จหากไม่มีข้อผิดพลาดเครือข่าย
+          console.log('คำขอยืนยันการรับรางวัลถูกส่งไปยัง Google Sheet handler แล้ว');
+          alert('ยืนยันการรับรางวัลแล้ว! โปรดตรวจสอบสถานะอีกครั้ง');
+          
+          // หลังจากยืนยันแล้ว ให้เรียก checkPrize อีกครั้งเพื่ออัปเดตสถานะบนหน้าเว็บ
+          await checkPrize();
+
+        } catch (error) {
+          console.error('เกิดข้อผิดพลาดในการยืนยันการรับรางวัล:', error);
+          alert('เกิดข้อผิดพลาดในการยืนยันการรับรางวัล: ' + error.message + '\nโปรดตรวจสอบการเชื่อมต่อ');
+          await checkPrize(); // ลองเรียก checkPrize อีกครั้งเผื่อมีข้อมูลค้างอยู่
         }
       }
     </script>
