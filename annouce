@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>ประกาศผลรางวัล Lucky Draw</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background: #f9f9f9;
+    }
+    h1 {
+      color: #333;
+    }
+    input, button {
+      font-size: 16px;
+      padding: 8px;
+      margin: 5px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #eee;
+    }
+  </style>
+</head>
+<body>
+
+<h1>ตรวจสอบรางวัล Lucky Draw</h1>
+<p>กรอกหมายเลข E-Ticket ID แล้วกด "เช็ครางวัล"</p>
+
+<input type="text" id="searchId" placeholder="เช่น 12345" />
+<button onclick="checkPrize()">เช็ครางวัล</button>
+
+<div id="result"></div>
+
+<script>
+  const sheetId = "1ujicA8LIYWqMda_2JumkF2pounl9gRTAVRAkSj3b1ck";
+  const sheetName = "List";
+  const sheetRange = "A3:G1000"; // เผื่อข้อมูลถึงแถว 1000
+
+  async function fetchSheetData() {
+    const url = `https://sheets.googleapis.com/v4/spreadsheets/${sheetId}/values/${sheetName}!${sheetRange}?key=YOUR_API_KEY`;
+    const res = await fetch(url);
+    const data = await res.json();
+    return data.values || [];
+  }
+
+  async function checkPrize() {
+    const inputId = document.getElementById("searchId").value.trim();
+    const resultDiv = document.getElementById("result");
+
+    if (!inputId) {
+      resultDiv.innerHTML = "<p style='color:red;'>กรุณากรอกหมายเลข E-Ticket ID</p>";
+      return;
+    }
+
+    const data = await fetchSheetData();
+
+    const matches = data.filter(row => row[0] === inputId);
+
+    if (matches.length === 0) {
+      resultDiv.innerHTML = `<p style="color:red;">ไม่พบหมายเลข ${inputId} ในรายการ</p>`;
+      return;
+    }
+
+    let tableHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>E-Ticket ID</th>
+            <th>ชื่อ-นามสกุล</th>
+            <th>ร้านยา</th>
+            <th>รางวัลที่ได้</th>
+          </tr>
+        </thead>
+        <tbody>
+    `;
+
+    matches.forEach(row => {
+      tableHTML += `
+        <tr>
+          <td>${row[0]}</td>
+          <td>${row[1] || "-"}</td>
+          <td>${row[2] || "-"}</td>
+          <td>${row[6] || "-"}</td>
+        </tr>
+      `;
+    });
+
+    tableHTML += `</tbody></table>`;
+    resultDiv.innerHTML = tableHTML;
+  }
+</script>
+
+</body>
+</html>
