@@ -6,25 +6,25 @@
   <style>
     body {
       font-family: sans-serif;
-      font-size: 24px; /* กำหนดขนาดตัวอักษรพื้นฐานสำหรับทั้งหน้า */
+      font-size: 24px;
       display: flex;
-      justify-content: center; /* จัดให้อยู่กึ่งกลางแนวนอน */
-      align-items: flex-start; /* จัดเนื้อหาให้อยู่ด้านบน */
-      min-height: 100vh; /* ทำให้ body มีความสูงเต็ม viewport */
-      margin: 0; /* ลบ margin เริ่มต้นของ body */
-      padding: 20px; /* เพิ่ม padding รอบเนื้อหา */
-      box-sizing: border-box; /* รวม padding ในความกว้างและความสูงทั้งหมดของ element */
-      background-color: #f4f4f4; /* สีพื้นหลังอ่อนๆ (ไม่บังคับ) */
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+      box-sizing: border-box;
+      background-color: #f4f4f4;
     }
 
     .container {
-      width: 90%; /* ปรับตามความเหมาะสม */
-      max-width: 960px; /* ความกว้างสูงสุดสำหรับหน้าจอขนาดใหญ่ */
-      text-align: center; /* จัดข้อความและ element แบบ inline ให้อยู่กึ่งกลางภายใน container */
-      background-color: #ffffff; /* สีพื้นหลังสีขาวสำหรับพื้นที่เนื้อหา */
+      width: 90%;
+      max-width: 960px;
+      text-align: center;
+      background-color: #ffffff;
       padding: 30px;
       border-radius: 8px;
-      box-shadow: 0 4px 8px rgba(0,0,0,0.1); /* เงาเล็กน้อยเพื่อเพิ่มมิติ */
+      box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
 
     h2, h3 {
@@ -42,7 +42,7 @@
       border: 1px solid #ccc;
       border-radius: 4px;
       margin-bottom: 20px;
-      width: calc(100% - 22px); /* ปรับสำหรับ padding และ border */
+      width: calc(100% - 22px);
       max-width: 300px;
       text-align: center;
     }
@@ -63,9 +63,9 @@
       background-color: #0056b3;
     }
 
-    #prizeList, #results {
+    #prizeList, #results, #nonRegisteredList {
       margin-top: 20px;
-      text-align: left; /* จัดรายการและผลลัพธ์ให้อยู่ทางซ้าย */
+      text-align: left;
       padding: 0 20px;
     }
 
@@ -77,13 +77,28 @@
     li {
       margin-bottom: 5px;
     }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    th, td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+
+    th {
+      background-color: #f2f2f2;
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <h2>ระบบสุ่มรางวัล Lucky Draw</h2>
 
-    <!-- ปุ่มนี้จะดึงข้อมูลผู้เข้าร่วมจาก Google Sheet และแสดงรายการรางวัล -->
     <button onclick="generatePrizes()">โหลดข้อมูลผู้เข้าร่วม & แสดงรายการรางวัล</button>
 
     <div id="prizeList"></div>
@@ -91,7 +106,9 @@
     <button onclick="drawPrizes()" style="display:none;" id="drawBtn">สุ่มรางวัล</button>
     <div id="results"></div>
 
-    <button onclick="sendToGoogleSheet()" style="display:none;" id="sendToSheetBtn">ส่งข้อมูลไป Google Sheet</button>
+    <button onclick="sendToGoogleSheet()" style="display:none;" id="sendToSheetBtn">ส่งผลรางวัลไป Google Sheet</button>
+
+    <div id="nonRegisteredList"></div>
 
     <script>
       const prizes = [
@@ -106,26 +123,27 @@
         { set: 9, name: "แก้วน้ำ", amount: "remaining" }
       ];
 
-      let participants = []; // นี่จะเก็บ E-Ticket ID ที่ดึงมาจาก Google Sheet
-      let drawResults = [];
+      let registeredParticipantsForDraw = []; // E-Ticket IDs สำหรับการสุ่มรางวัล
+      let allParticipantDetails = []; // รายละเอียดผู้เข้าร่วมทั้งหมด (รวมทั้ง Registered และ Non-Registered)
+      let drawResults = []; // ผลการสุ่มรางวัล
 
       // URL ของ Google Apps Script Web App ของคุณ:
-      // URL นี้สำหรับดึงข้อมูลผู้เข้าร่วมที่ลงทะเบียน (ฟังก์ชัน doGet)
+      // URL นี้สำหรับดึงข้อมูลผู้เข้าร่วมทั้งหมด (E-Ticket ID, ชื่อ-สกุล, ชื่อร้าน, สถานะ) และฟิลเตอร์สำหรับสุ่มรางวัล
       const getParticipantsAppsScriptUrl = 'https://script.google.com/macros/s/AKfycbxgbDNZlZ-Absp50nXK_z64TJAgiwnjDcrWt04AlC1aNxp1urfOxw8rjtMZbROdO8Dl/exec'; 
-      // URL นี้สำหรับโพสต์ผลการสุ่มรางวัล (ฟังก์ชัน doPost)
-      const postResultsAppsScriptUrl = 'https://script.google.com/macros/s/AKfycbzCF49uS4qZeLnZKcnZwL9TTz11dSmya3cApqx6aTQf-04rWl0fT-vNocCJHtlq5rJU/exec';
+      // URL นี้สำหรับโพสต์ผลการสุ่มรางวัลกลับไปอัปเดตคอลัมน์ F ในชีต "List"
+      const updatePrizeResultsAppsScriptUrl = 'https://script.google.com/macros/s/AKfycbzjRxHJ6gP4kZ8BrTisko4E6_wUv0LxZ14nuP3ImlnRdqDjdHJgolhe2ma2e7sOnWJZ/exec'; // <--- URL ถูกอัปเดตที่นี่แล้ว!
 
       async function generatePrizes() {
         // --- ขั้นตอนที่ 1: ดึงข้อมูลผู้เข้าร่วมจาก Google Sheet ---
         try {
-          // แสดงข้อความกำลังโหลด
           document.getElementById("prizeList").innerHTML = `<p>กำลังโหลดข้อมูลผู้เข้าร่วมงานจาก Google Sheet...</p>`;
           document.getElementById("drawBtn").style.display = "none";
           document.getElementById("sendToSheetBtn").style.display = "none";
+          document.getElementById("nonRegisteredList").innerHTML = ''; // Clear previous non-registered list
 
           const response = await fetch(getParticipantsAppsScriptUrl, {
             method: 'GET',
-            mode: 'cors' // ใช้ 'cors' mode เพื่ออ่านการตอบกลับจาก Apps Script
+            mode: 'cors'
           });
 
           if (!response.ok) {
@@ -133,10 +151,19 @@
           }
 
           const data = await response.json();
-          if (data.status === "success" && data.participants && data.participants.length > 0) {
-            participants = data.participants; // ใส่ E-Ticket ID ที่ดึงมาลงในอาร์เรย์ participants
+          if (data.status === "success" && data.allParticipants && data.allParticipants.length > 0) {
+            allParticipantDetails = data.allParticipants; // เก็บรายละเอียดทั้งหมด
+            
+            // กรองเฉพาะผู้ที่ Registered สำหรับการสุ่มรางวัล
+            registeredParticipantsForDraw = allParticipantDetails
+              .filter(p => p.status === "Registered" && !isNaN(parseInt(p.id)))
+              .map(p => parseInt(p.id));
+
+            // แสดงรายการผู้ไม่เข้าร่วมงาน
+            displayNonRegisteredParticipants();
+
           } else {
-            alert("ไม่พบข้อมูลผู้เข้าร่วมงานที่ลงทะเบียนใน Google Sheet 'List' คอลัมน์ E หรือเกิดข้อผิดพลาดในการดึงข้อมูล.");
+            alert("ไม่พบข้อมูลผู้เข้าร่วมงานที่ลงทะเบียน หรือเกิดข้อผิดพลาดในการดึงข้อมูล.");
             console.error("Error fetching participants:", data.message || "Unknown error");
             document.getElementById("prizeList").innerHTML = `<p style="color: red;">ไม่สามารถโหลดข้อมูลผู้เข้าร่วมงานได้.</p>`;
             return;
@@ -150,36 +177,33 @@
         }
 
         // --- ขั้นตอนที่ 2: คำนวณและแสดงรางวัลตามจำนวนผู้เข้าร่วมที่ดึงมา ---
-        const total = participants.length;
-        if (total <= 0) {
+        const totalRegistered = registeredParticipantsForDraw.length;
+        if (totalRegistered <= 0) {
           alert("ไม่พบผู้เข้าร่วมงานที่ลงทะเบียนใน Google Sheet 'List' คอลัมน์ E");
           document.getElementById("prizeList").innerHTML = `<p style="color: red;">ไม่พบผู้เข้าร่วมงานที่ลงทะเบียน.</p>`;
           return;
         }
 
         let used = prizes.slice(0, 8).reduce((sum, p) => sum + p.amount, 0);
-        // ตรวจสอบให้แน่ใจว่าจำนวน 'remaining' สำหรับรางวัลสุดท้าย ('แก้วน้ำ' ซึ่งคือ prizes[8]) ไม่เป็นค่าลบ
-        // ดัชนีที่ถูกต้องสำหรับ 'แก้วน้ำ' คือ 8 (เป็นรายการที่ 9, ดัชนี 8)
-        prizes[8].amount = Math.max(0, total - used); 
+        prizes[8].amount = Math.max(0, totalRegistered - used); 
 
-        let html = `<h3>รายการของรางวัล (จากผู้เข้าร่วม ${total} คน):</h3><ul>`;
+        let html = `<h3>รายการของรางวัล (จากผู้เข้าร่วมที่ลงทะเบียน ${totalRegistered} คน):</h3><ul>`;
         prizes.forEach(p => {
           html += `<li>ชุดที่ ${p.set} - ${p.name} จำนวน: ${p.amount} รางวัล</li>`;
         });
         html += `</ul>`;
         document.getElementById("prizeList").innerHTML = html;
         document.getElementById("drawBtn").style.display = "inline-block";
-        document.getElementById("sendToSheetBtn").style.display = "none"; // ซ่อนจนกว่าผลการสุ่มจะพร้อม
+        document.getElementById("sendToSheetBtn").style.display = "none";
       }
 
       function drawPrizes() {
-        // ตรวจสอบให้แน่ใจว่ารายการผู้เข้าร่วมถูกโหลดแล้ว
-        if (participants.length === 0) {
+        if (registeredParticipantsForDraw.length === 0) {
           alert("กรุณา 'โหลดข้อมูลผู้เข้าร่วม' ก่อนทำการสุ่มรางวัล");
           return;
         }
 
-        let pool = [...participants]; // สุ่มจากผู้เข้าร่วมที่ลงทะเบียนที่ดึงมา
+        let pool = [...registeredParticipantsForDraw]; 
         drawResults = [];
 
         let html = `<h3>ผลการสุ่มรางวัล:</h3>`;
@@ -188,7 +212,7 @@
           for (let i = 0; i < p.amount; i++) {
             if (pool.length === 0) {
               console.warn(`ไม่เหลือผู้เข้าร่วมเพียงพอที่จะสุ่มรางวัล ${p.name} ทั้งหมด.`);
-              break; // หยุดถ้า pool ว่างเปล่าก่อนที่จะสุ่มรางวัลทั้งหมดสำหรับชุดนี้
+              break;
             }
             const index = Math.floor(Math.random() * pool.length);
             selected.push(pool.splice(index, 1)[0]);
@@ -198,41 +222,70 @@
         });
 
         document.getElementById("results").innerHTML = html;
-        document.getElementById("sendToSheetBtn").style.display = "inline-block"; // แสดงปุ่มส่งข้อมูล
+        document.getElementById("sendToSheetBtn").style.display = "inline-block";
       }
 
-      function sendToGoogleSheet() {
+      async function sendToGoogleSheet() {
         if (drawResults.length === 0) {
           alert("กรุณาสุ่มรางวัลก่อนส่งข้อมูลไป Google Sheet");
           return;
         }
 
-        let dataToSend = [];
+        let updatesToSend = [];
         drawResults.forEach(prizeSet => {
           prizeSet.winners.forEach(winnerId => {
-            // รูปแบบสำหรับ Google Sheet: [E-Ticket ID (คอลัมน์ E), ข้อมูลรางวัลรวม (คอลัมน์ F)]
-            dataToSend.push([winnerId, `ชุดที่ ${prizeSet.set} - ${prizeSet.name}`]);
+            // ส่ง E-Ticket ID และเลขชุดรางวัล
+            updatesToSend.push({ eticketId: winnerId, prizeSet: prizeSet.set });
           });
         });
 
-        fetch(postResultsAppsScriptUrl, {
-          method: 'POST',
-          mode: 'no-cors', // ใช้ 'no-cors' สำหรับคำขอแบบง่ายไปยัง Apps Script โดยไม่จำเป็นต้องอ่านการตอบกลับ
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ data: dataToSend }),
-        })
-        .then(() => {
-          // ด้วย 'no-cors' วัตถุ response จะทึบแสงและไม่สามารถตรวจสอบความสำเร็จ/ความล้มเหลวได้
-          // ถือว่าสำเร็จหากไม่มีข้อผิดพลาดเครือข่าย พึ่งพาการทำงานของ Apps Script
-          console.log('ข้อมูลถูกส่งไปยังตัวจัดการ Google Sheet แล้ว โปรดตรวจสอบ Google Sheet ของคุณสำหรับการอัปเดต');
-          alert('ส่งข้อมูลไป Google Sheet แล้ว (โปรดตรวจสอบผลลัพธ์ใน Google Sheet)');
-        })
-        .catch(error => {
+        try {
+          const response = await fetch(updatePrizeResultsAppsScriptUrl, {
+            method: 'POST',
+            mode: 'no-cors', // ใช้ 'no-cors' หากไม่ต้องการอ่านการตอบกลับโดยตรงจาก Apps Script
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ updates: updatesToSend }),
+          });
+
+          // เนื่องจากใช้ 'no-cors' จึงไม่สามารถตรวจสอบ response.ok ได้โดยตรง
+          // แต่เราสามารถสันนิษฐานว่าสำเร็จหากไม่มีข้อผิดพลาดเครือข่าย
+          console.log('ข้อมูลถูกส่งไปยัง Google Sheet handler แล้ว โปรดตรวจสอบ Google Sheet ของคุณสำหรับการอัปเดต.');
+          alert('ส่งผลรางวัลไป Google Sheet แล้ว (โปรดตรวจสอบผลลัพธ์ใน Google Sheet)');
+
+        } catch (error) {
           console.error('เกิดข้อผิดพลาดในการส่งข้อมูลไป Google Sheet:', error);
           alert('เกิดข้อผิดพลาดในการส่งข้อมูลไป Google Sheet: ' + error.message + '\nโปรดตรวจสอบ URL และการตั้งค่า Apps Script');
-        });
+        }
+      }
+
+      function displayNonRegisteredParticipants() {
+        const nonRegistered = allParticipantDetails.filter(p => p.status !== "Registered");
+
+        let html = `<h3>ผู้เข้าร่วมที่ไม่ได้ลงทะเบียน:</h3>`;
+        if (nonRegistered.length > 0) {
+          html += `<table>
+                    <thead>
+                      <tr>
+                        <th>E-TICKET ID</th>
+                        <th>ชื่อ-สกุล</th>
+                        <th>ชื่อร้าน</th>
+                      </tr>
+                    </thead>
+                    <tbody>`;
+          nonRegistered.forEach(p => {
+            html += `<tr>
+                      <td>${p.id || '-'}</td>
+                      <td>${p.name || '-'}</td>
+                      <td>${p.shop || '-'}</td>
+                    </tr>`;
+          });
+          html += `</tbody></table>`;
+        } else {
+          html += `<p>ไม่พบผู้เข้าร่วมที่ไม่ได้ลงทะเบียน</p>`;
+        }
+        document.getElementById("nonRegisteredList").innerHTML = html;
       }
     </script>
   </div>
