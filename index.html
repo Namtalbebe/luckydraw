@@ -9,7 +9,7 @@
       font-size: 24px;
       display: flex;
       justify-content: center;
-      align-items: flex-start;
+      align-items: flex-start; /* จัดเนื้อหาให้อยู่ด้านบน */
       min-height: 100vh;
       margin: 0;
       padding: 20px;
@@ -97,7 +97,7 @@
 </head>
 <body>
   <div class="container">
-    <h2>ระบบสุ่มรางวัล Lucky Draw 2565</h2>
+    <h2>ระบบสุ่มรางวัล Lucky Draw</h2>
 
     <button onclick="generatePrizes()">โหลดข้อมูลผู้เข้าร่วม & แสดงรายการรางวัล</button>
 
@@ -128,10 +128,10 @@
       let drawResults = []; // ผลการสุ่มรางวัล
 
       // URL ของ Google Apps Script Web App ของคุณ:
-      // URL นี้สำหรับดึงข้อมูลผู้เข้าร่วมทั้งหมด (E-Ticket ID, ชื่อ-สกุล, ชื่อร้าน, สถานะ) และฟิลเตอร์สำหรับสุ่มรางวัล
+      // URL นี้สำหรับดึงข้อมูลผู้เข้าร่วมทั้งหมด (doGet function)
       const getParticipantsAppsScriptUrl = 'https://script.google.com/macros/s/AKfycbxLAcf6bxGYNKsjaHmC9K34iHtDBm8rnYOPglVHaawWa6HSSHIUg1ERf7aRaxg8mjAh/exec'; 
-      // URL นี้สำหรับโพสต์ผลการสุ่มรางวัลกลับไปอัปเดตคอลัมน์ F ในชีต "List"
-      const updatePrizeResultsAppsScriptUrl = 'https://script.google.com/macros/s/AKfycbzjRxHJ6gP4kZ8BrTisko4E6_wUv0LxZ14nuP3ImlnRdqDjdHJgolhe2ma2e7sOnWJZ/exec'; // <--- URL ถูกอัปเดตที่นี่แล้ว!
+      // URL นี้สำหรับโพสต์ผลการสุ่มรางวัลกลับไปอัปเดตคอลัมน์ F ในชีต "Data"
+      const updatePrizeResultsAppsScriptUrl = 'https://script.google.com/macros/s/AKfycbzjRxHJ6gP4kZ8BrTisko4E6_wUv0LxZ14nuP3ImlnRdqDjdHJgolhe2ma2e7sOnWJZ/exec'; 
 
       async function generatePrizes() {
         // --- ขั้นตอนที่ 1: ดึงข้อมูลผู้เข้าร่วมจาก Google Sheet ---
@@ -179,7 +179,7 @@
         // --- ขั้นตอนที่ 2: คำนวณและแสดงรางวัลตามจำนวนผู้เข้าร่วมที่ดึงมา ---
         const totalRegistered = registeredParticipantsForDraw.length;
         if (totalRegistered <= 0) {
-          alert("ไม่พบผู้เข้าร่วมงานที่ลงทะเบียนใน Google Sheet 'List' คอลัมน์ E");
+          alert("ไม่พบผู้เข้าร่วมงานที่ลงทะเบียนใน Google Sheet 'Data' คอลัมน์ E"); // อัปเดตชื่อชีต
           document.getElementById("prizeList").innerHTML = `<p style="color: red;">ไม่พบผู้เข้าร่วมงานที่ลงทะเบียน.</p>`;
           return;
         }
@@ -242,15 +242,13 @@
         try {
           const response = await fetch(updatePrizeResultsAppsScriptUrl, {
             method: 'POST',
-            mode: 'no-cors', // ใช้ 'no-cors' หากไม่ต้องการอ่านการตอบกลับโดยตรงจาก Apps Script
+            mode: 'no-cors',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({ updates: updatesToSend }),
           });
 
-          // เนื่องจากใช้ 'no-cors' จึงไม่สามารถตรวจสอบ response.ok ได้โดยตรง
-          // แต่เราสามารถสันนิษฐานว่าสำเร็จหากไม่มีข้อผิดพลาดเครือข่าย
           console.log('ข้อมูลถูกส่งไปยัง Google Sheet handler แล้ว โปรดตรวจสอบ Google Sheet ของคุณสำหรับการอัปเดต.');
           alert('ส่งผลรางวัลไป Google Sheet แล้ว (โปรดตรวจสอบผลลัพธ์ใน Google Sheet)');
 
