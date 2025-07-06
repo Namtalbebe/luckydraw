@@ -155,9 +155,10 @@
             allParticipantDetails = data.allParticipants; // เก็บรายละเอียดทั้งหมด
             
             // กรองเฉพาะผู้ที่ Registered สำหรับการสุ่มรางวัล
+            // เปลี่ยนการแปลงเป็น parseInt() เพื่อคงรูปแบบ string ไว้
             registeredParticipantsForDraw = allParticipantDetails
-              .filter(p => p.status === "Registered" && !isNaN(parseInt(p.id)))
-              .map(p => parseInt(p.id));
+              .filter(p => p.status === "Registered" && p.id !== '') // ตรวจสอบว่า ID ไม่ว่างเปล่า
+              .map(p => p.id); // เก็บ ID เป็น string
 
             // แสดงรายการผู้ไม่เข้าร่วมงาน
             displayNonRegisteredParticipants();
@@ -234,7 +235,7 @@
         let updatesToSend = [];
         drawResults.forEach(prizeSet => {
           prizeSet.winners.forEach(winnerId => {
-            // ส่ง E-Ticket ID และเลขชุดรางวัล
+            // ส่ง E-Ticket ID และเลขชุดรางวัล (winnerId เป็น string อยู่แล้ว)
             updatesToSend.push({ eticketId: winnerId, prizeSet: prizeSet.set });
           });
         });
